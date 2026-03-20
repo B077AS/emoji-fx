@@ -6,10 +6,14 @@
     <description>Emoji support for JavaFX</description>
 
     <parent>
-        <groupId>com.gluonhq.emoji</groupId>
+        <groupId>io.github.b077as.emojifx</groupId>
         <artifactId>parent</artifactId>
-        <version>1.1.1-SNAPSHOT</version>
+        <version>1.0.0</version>
     </parent>
+
+    <properties>
+        <connect.version>2.0.1</connect.version>
+    </properties>
 
     <dependencies>
         <dependency>
@@ -17,6 +21,22 @@
             <artifactId>javafx-controls</artifactId>
             <version>${javafx.version}</version>
             <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.glassfish</groupId>
+            <artifactId>jakarta.json</artifactId>
+            <version>1.1.6</version>
+        </dependency>
+        <dependency>
+            <groupId>com.gluonhq</groupId>
+            <artifactId>connect</artifactId>
+            <version>${connect.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.openjfx</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.junit.jupiter</groupId>

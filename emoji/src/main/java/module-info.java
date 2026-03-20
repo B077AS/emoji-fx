@@ -25,10 +25,13 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-module com.gluonhq.emoji {
+module io.github.b077as.emojifx {
     requires javafx.controls;
     requires java.logging;
+    requires java.net.http;
+    requires java.json;
+    requires com.gluonhq.connect;
 
-    exports com.gluonhq.emoji;
-    exports com.gluonhq.emoji.util;
+    exports io.github.b077as.emojifx;
+    exports io.github.b077as.emojifx.util;
 }

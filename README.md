@@ -1,162 +1,94 @@
-[![Gluon](.github/assets/gluon_logo.svg)](https://gluonhq.com)
+# emoji-fx
 
-[![Build](https://github.com/gluonhq/emoji/actions/workflows/build.yml/badge.svg)](https://github.com/gluonhq/emoji/actions/workflows/build.yml)
-[![Maven Central](https://img.shields.io/maven-central/v/com.gluonhq/emoji)](https://search.maven.org/#search|ga|1|com.gluonhq.emoji)
-[![License](https://img.shields.io/github/license/gluonhq/emoji)](https://opensource.org/licenses/GPL-3.0)
-[![javadoc](https://javadoc.io/badge2/com.gluonhq/emoji/javadoc.svg?color=blue)](https://javadoc.io/doc/com.gluonhq/emoji)
+> A fork of [Gluon's emoji library](https://github.com/gluonhq/emoji), extended with automatic sprite downloading and multi-vendor support.
 
-Emoji library is a Java implementation of the [emoji-data](https://github.com/iamcal/emoji-data) project adding emoji support for JavaFX applications.
+## How it works
 
-## What is an Emoji?
+On first run, the library automatically:
 
-From [Wikipedia](https://en.wikipedia.org/wiki/Emoji):
-
-> An emoji is a pictogram, logogram, ideogram or smiley embedded in text and used in electronic messages and web pages.
-> The primary function of emoji is to fill in emotional cues otherwise missing from typed conversation.
-
-## Emoji support in JavaFX
-
-JavaFX can be used to create client applications that target desktop, embedded, mobiles and even web.
-Given the wide variety of applications, it becomes very important to have emoji support in the platform.
-This project aims to bridge this gap and add emoji support to JavaFX.
+1. Resolves the latest emoji-data commit from GitHub (falls back to cache or a known-good commit if offline).
+2. Downloads `emoji.json` for that commit and generates a local `emoji.csv`.
+3. Downloads the sprite sheets for the chosen vendor (20, 32, 64 px).
+4. Caches everything under `~/.emoji-fx/{vendor}/{commit}/` for subsequent runs.
 
 ## Usage
 
-As stated earlier, emojis can be represented in form of text or a picture.
-This library can be used to represent an Emoji as one of the following and seamlessly interchange between these types:
+### Initialization
 
-* String, e.g. `wave`
-* Unicode, e.g. `\uD83D\uDC4B`
-* Hex code string, e.g. `1F44B-1F3FC`
-* Image, e.g. `👋`
+Call once at application startup before using any emoji API:
+```java
+EmojiInitializer.initialize(EmojiVendor.TWITTER)
+    .thenAccept(ok -> {
+        if (ok) {
+        // library is ready
+        }
+        });
+```
 
-[Emoji](https://github.com/gluonhq/emoji/blob/main/emoji/src/main/java/com/gluonhq/emoji/Emoji.java) data class is used to represent each emoji.
-For better understanding of the Emoji class, we suggest you to go through [Using the data](https://github.com/iamcal/emoji-data#using-the-data) in emoji-data or the Emoji [javadoc](https://javadoc.io/doc/com.gluonhq/emoji).
+The download directory defaults to `~/.emoji-fx/`, but can be customized by passing a `Path` as the second argument:
+```java
+EmojiInitializer.initialize(EmojiVendor.FACEBOOK, Path.of("/your/custom/directory"))
+        .thenAccept(ok -> {
+            if (!ok) log.warn("Emoji assets failed to load");
+        })
+        .join();
+```
+
+### Vendors
+
+Three emoji image sets are supported:
+
+| Vendor | Identifier |
+|--------|-----------|
+| `EmojiVendor.GOOGLE` | Google |
+| `EmojiVendor.TWITTER` | Twitter (Twemoji) |
+| `EmojiVendor.FACEBOOK` | Facebook |
 
 ### API overview
 
-`EmojiData` contains the public API which can be used to create `Emoji` objects from String and Unicode, and vice-versa.
+`EmojiData` contains the public API to create `Emoji` objects from text, unicode, or hex codepoints.
 
-Fetch `👋` emoji from text:
-
-```
+Fetch 👋 from short name:
+```java
 Optional<Emoji> emoji = EmojiData.emojiFromShortName("wave");
 ```
 
-In case the exact text for emoji is not known, `search` API can be used to get a list of emojis which matches the text:
-
-```
+Search emojis by partial text:
+```java
 List<Emoji> emojis = EmojiData.search("wav");
 ```
 
-Fetch `👋` emoji from unicode:
-
-```
+Fetch 👋 from unicode:
+```java
 Optional<Emoji> emoji = EmojiData.emojiFromUnicodeString("\uD83D\uDC4B");
 ```
 
-Fetch `👋` emoji from hex-code point string:
-
-```
+Fetch 👋 from hex codepoint:
+```java
 Optional<Emoji> emoji = EmojiData.emojiFromCodepoints("1F44B-1F3FC");
 ```
 
-Fetch `👋` emoji's unicode from text:
-
-```
-Optional<String> unicode = EmojiData.emojiForText("wave");
-```
-
-UTF-8 encoded text can be parsed into a list of emojis and regular text using `TextUtil`:
-
-```
-List<Object> nodes = TextUtil.convertToStringAndEmojiObjects("this is an emoji: \uD83D\uDC4B");
+Parse a UTF-8 string into a mixed list of text and emoji objects:
+```java
+List<Object> nodes = TextUtil.convertToStringAndEmojiObjects("hello \uD83D\uDC4B");
 ```
 
-## Projects
-
-The GitHub repository contains 3 projects: emoji, samples, emoji-updater. 
-
-### emoji
-Raw emoji support with `Emoji` and `EmojiData` classes.
-This module is to be used  as a dependency in your JavaFX application.
-
-Use the emoji dependency in a Maven project:
-
-```
+## Dependency
+```xml
 <dependency>
-    <groupId>com.gluonhq.emoji</groupId>
-    <artifactId>emoji</artifactId>
-    <version>${version}</version>
+    <groupId>io.github.b077as</groupId>
+    <artifactId>emoji-fx</artifactId>
+    <version>1.0.0</version>
 </dependency>
-```
-
-Manually build the emoji artifact:
-
-```
-mvn clean install -f emoji
-```
-
-### Offline
-Emojis are extracted from sprites which are downloaded and stored in local file system to reduce the size of the application.
-In cases where downloading of these sprites is not possible, the offline module can be added as a dependency.
-
-```
-<dependency>
-    <groupId>com.gluonhq.emoji</groupId>
-    <artifactId>offline</artifactId>
-    <version>${version}</version>
-</dependency>
-```
-
-Manually build the offline artifact:
-
-```
-mvn clean install -f offline
-```
-
-### Samples
-
-#### Nodes App
-Simple JavaFX application that displays all emojis.
-This application can be considered as a playground to test emoji and its APIs.
-
-![emoji-sample.png](.github/assets/emoji-sample.png)
-
-Each emoji is an ImageView and shows the description of the emoji on hover:
-
-![emoji-sample-hover.png](.github/assets/emoji-sample-hover.png)
-
-Run the sample nodes application:
-
-```
-mvn javafx:run -f samples/nodes
-```
-
-Run the sample introduction application:
-
-```
-mvn javafx:run -f samples/introduction
-```
-
-### Updater
-Utility to manually update Emoji to the latest emoji data, whenever a new version is released.
-Normally, this will be used by the library developers, but in case we are falling behind, you can use it too ;)
-
-To update the emoji list, set the [commit number](https://github.com/gluonhq/emoji/blob/main/emoji-updater/src/main/java/com/gluonhq/emoji/tools/Main.java#L39)
-from [emoji-data](https://github.com/iamcal/emoji-data) and run:
-
-```
-mvn javafx:run -f updater
 ```
 
 ## Contribution
 
 All contributions are welcome!
 
-There are two common ways to contribute:
+- Submit [issues](https://github.com/b077as/emoji-fx/issues) for bug reports, questions, or feature requests.
+- Contributions can be submitted via [pull request](https://github.com/b077as/emoji-fx/pulls).
 
-- Submit [issues](https://github.com/gluonhq/emoji/issues) for bug reports, questions, or requests for enhancements.
-- Contributions can be submitted via [pull request](https://github.com/gluonhq/emoji/pulls), provided you have signed the [Gluon Individual Contributor License Agreement (CLA)](https://cla.gluonhq.com).
+## License
 
-Follow [contributing rules](https://github.com/gluonhq/emoji/blob/main/CONTRIBUTING.md) for this repository.
+[GNU General Public License v3.0](https://opensource.org/licenses/GPL-3.0)

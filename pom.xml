@@ -1,22 +1,29 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
-    <groupId>com.gluonhq.emoji</groupId>
+    <groupId>io.github.b077as.emojifx</groupId>
     <artifactId>parent</artifactId>
     <packaging>pom</packaging>
-    <version>1.1.1-SNAPSHOT</version>
+    <version>1.0.0</version>
     <name>Emoji</name>
     <description>Emoji support for JavaFX</description>
-    <inceptionYear>2019</inceptionYear>
-    <url>https://github.com/gluonhq/emoji</url>
+    <url>https://github.com/B077AS/emoji-fx</url>
 
     <modules>
         <module>emoji</module>
-        <module>offline</module>
-        <module>updater</module>
-        <module>samples/introduction</module>
-        <module>samples/nodes</module>
     </modules>
+
+    <licenses>
+        <license>
+            <name>GNU General Public License v3.0</name>
+            <url>https://www.gnu.org/licenses/gpl-3.0.html</url>
+        </license>
+    </licenses>
+
+    <scm>
+        <url>https://github.com/B077AS/emoji-fx</url>
+        <connection>scm:git:git://github.com/B077AS/emoji-fx.git</connection>
+    </scm>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -26,52 +33,6 @@
         <javadoc.plugin.version>3.1.0</javadoc.plugin.version>
         <gpg.plugin.version>1.6</gpg.plugin.version>
     </properties>
-
-    <organization>
-        <name>Gluon</name>
-        <url>https://gluonhq.com</url>
-    </organization>
-
-    <issueManagement>
-        <system>GitHub</system>
-        <url>https://github.com/gluonhq/emoji/issues</url>
-    </issueManagement>
-
-    <licenses>
-        <license>
-            <name>GNU GENERAL PUBLIC LICENSE, Version 3</name>
-            <url>http://www.gnu.org/licenses/gpl-3.0.html</url>
-            <distribution>repo</distribution>
-        </license>
-    </licenses>
-
-    <developers>
-        <developer>
-            <name>Abhinay Agarwal</name>
-            <email>abhinay.agarwal@gluonhq.com</email>
-            <organization>Gluon</organization>
-            <organizationUrl>https://www.gluonhq.com</organizationUrl>
-        </developer>
-        <developer>
-            <name>José Pereda</name>
-            <email>jose.pereda@gluonhq.com</email>
-            <organization>Gluon</organization>
-            <organizationUrl>https://www.gluonhq.com</organizationUrl>
-        </developer>
-    </developers>
-
-    <scm>
-        <url>https://github.com/gluonhq/emoji</url>
-        <connection>scm:git:git://github.com/gluonhq/emoji.git</connection>
-        <developerConnection>scm:git:ssh://git@github.com:gluonhq/emoji.git</developerConnection>
-    </scm>
-
-    <pluginRepositories>
-        <pluginRepository>
-            <id>Snapshots</id>
-            <url>https://oss.sonatype.org/content/repositories/snapshots</url>
-        </pluginRepository>
-    </pluginRepositories>
 
     <build>
         <plugins>
@@ -148,8 +109,6 @@
                                     <goal>sign</goal>
                                 </goals>
                                 <configuration>
-                                    <!-- This is necessary for gpg to not try to use the pinentry programs -->
-                                    <!-- Only required for GPG >= 2.2 -->
                                     <gpgArguments>
                                         <arg>--pinentry-mode</arg>
                                         <arg>loopback</arg>
@@ -162,5 +121,4 @@
             </build>
         </profile>
     </profiles>
-
 </project>
