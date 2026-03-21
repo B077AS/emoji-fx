@@ -4,7 +4,7 @@
     <groupId>io.github.b077as.emojifx</groupId>
     <artifactId>parent</artifactId>
     <packaging>pom</packaging>
-    <version>1.0.0</version>
+    <version>1.0.1</version>
     <name>Emoji</name>
     <description>Emoji support for JavaFX</description>
     <url>https://github.com/B077AS/emoji-fx</url>
@@ -19,6 +19,14 @@
             <url>https://www.gnu.org/licenses/gpl-3.0.html</url>
         </license>
     </licenses>
+
+    <developers>
+        <developer>
+            <id>b077as</id>
+            <name>William Solari</name>
+            <url>https://github.com/b077as</url>
+        </developer>
+    </developers>
 
     <scm>
         <url>https://github.com/B077AS/emoji-fx</url>

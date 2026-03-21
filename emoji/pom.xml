@@ -4,11 +4,12 @@
     <artifactId>emoji</artifactId>
     <name>Emoji Core</name>
     <description>Emoji support for JavaFX</description>
+    <url>https://github.com/B077AS/emoji-fx</url>
 
     <parent>
         <groupId>io.github.b077as.emojifx</groupId>
         <artifactId>parent</artifactId>
-        <version>1.0.0</version>
+        <version>1.0.1</version>
     </parent>
 
     <properties>

@@ -19,13 +19,16 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Stream;
 
 public class EmojiInitializer {
 
@@ -52,21 +55,21 @@ public class EmojiInitializer {
     }
 
     /**
-     * Returns the commit SHA that was used during the last successful initialization.
+     * Returns the commit SHA used during the last successful initialization.
      */
     public static String getResolvedCommit() {
         return resolvedCommit;
     }
 
     /**
-     * Returns the vendor that was used during the last successful initialization.
+     * Returns the vendor used during the last successful initialization.
      */
     public static EmojiVendor getResolvedVendor() {
         return resolvedVendor;
     }
 
     /**
-     * Returns the base storage directory that was used during the last successful initialization.
+     * Returns the base storage directory used during the last successful initialization.
      */
     public static Path getResolvedBaseDir() {
         return resolvedBaseDir;
@@ -85,12 +88,12 @@ public class EmojiInitializer {
 
     /**
      * Asynchronously initializes the emoji library for the given vendor,
-     * storing all cached data under the specified {@code baseDir}.
-     * Downloads emoji data and sprites if not already cached.
+     * storing cached data under {@code baseDir}. Downloads emoji metadata and sprite
+     * sheets if not already present, then removes any older cached versions for that vendor.
      *
      * @param vendor  the emoji image set to use
-     * @param baseDir root directory under which vendor/commit subdirectories will be created;
-     *                must be writable. For example: {@code Paths.get("/data/my-emoji-cache")}
+     * @param baseDir root directory under which vendor/commit subdirectories are created;
+     *                must be writable (e.g. {@code Paths.get("/data/my-emoji-cache")})
      * @return a future resolving to {@code true} on success, {@code false} on failure
      * @throws IllegalArgumentException if {@code baseDir} is null
      */
@@ -106,12 +109,12 @@ public class EmojiInitializer {
                     return false;
                 }
 
-                LOG.info("Using emoji-data commit: " + commit);
                 Path commitDir = baseDir(vendor, commit, baseDir);
                 Files.createDirectories(commitDir);
 
                 ensureEmojiJsonAndCsv(commit, commitDir);
                 ensureSprites(vendor, commit, commitDir);
+                pruneOldCommits(vendor, commit, baseDir);
 
                 resolvedCommit = commit;
                 resolvedVendor = vendor;
@@ -127,8 +130,9 @@ public class EmojiInitializer {
     }
 
     /**
-     * Resolves the commit SHA to use. Tries GitHub first, then the local cache,
-     * then falls back to the hardcoded {@link #FALLBACK_COMMIT}.
+     * Resolves the commit SHA to use. Tries the GitHub API first, then falls back to
+     * the most recently cached local version, and finally to the hardcoded
+     * {@link #FALLBACK_COMMIT}.
      */
     private static Optional<String> resolveCommit(EmojiVendor vendor, Path baseDir) {
         try {
@@ -168,8 +172,8 @@ public class EmojiInitializer {
     }
 
     /**
-     * Scans the given {@code baseDir} for the given vendor and returns
-     * the most recently modified commit directory name, if any.
+     * Scans {@code baseDir} for the given vendor and returns the most recently
+     * modified commit directory name, if any exist.
      */
     private static Optional<String> findLatestCachedCommit(EmojiVendor vendor, Path baseDir) {
         Path vendorDir = baseDir.resolve(vendor.getId());
@@ -195,7 +199,46 @@ public class EmojiInitializer {
     }
 
     /**
-     * Ensures {@code emoji.json} and {@code emoji.csv} exist in the cache directory,
+     * Deletes all commit directories for the given vendor other than {@code keepCommit}.
+     * Called after a successful download to avoid accumulating stale sprite sheets.
+     */
+    private static void pruneOldCommits(EmojiVendor vendor, String keepCommit, Path baseDir) {
+        Path vendorDir = baseDir.resolve(vendor.getId());
+        if (!Files.exists(vendorDir)) {
+            return;
+        }
+        try {
+            List<Path> toDelete = Files.list(vendorDir)
+                    .filter(Files::isDirectory)
+                    .filter(p -> !p.getFileName().toString().equals(keepCommit))
+                    .collect(Collectors.toList());
+
+            for (Path old : toDelete) {
+                deleteDirectory(old);
+            }
+        } catch (IOException e) {
+            LOG.warning("Could not prune old commit directories: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Recursively deletes a directory and all of its contents.
+     */
+    private static void deleteDirectory(Path dir) throws IOException {
+        try (Stream<Path> stream = Files.walk(dir)) {
+            stream.sorted(Comparator.reverseOrder())
+                    .forEach(p -> {
+                        try {
+                            Files.delete(p);
+                        } catch (IOException e) {
+                            LOG.warning("Failed to delete: " + p + " — " + e.getMessage());
+                        }
+                    });
+        }
+    }
+
+    /**
+     * Ensures {@code emoji.json} and {@code emoji.csv} exist in the commit cache directory,
      * downloading and generating them if necessary.
      */
     private static void ensureEmojiJsonAndCsv(String commit, Path commitDir)
@@ -205,20 +248,13 @@ public class EmojiInitializer {
 
         if (!Files.exists(jsonPath)) {
             String url = String.format(EMOJI_JSON_URL, commit);
-            LOG.fine("Downloading emoji.json from: " + url);
             downloadWithLock(URI.create(url).toURL(), jsonPath,
                     commitDir.resolve("emoji.json.lck"));
-        } else {
-            LOG.fine("emoji.json already cached");
         }
 
         if (!Files.exists(csvPath)) {
-            LOG.fine("Generating emoji.csv...");
             List<EmojiCsv> emojiList = parseEmojiJson(jsonPath);
             writeCsv(emojiList, csvPath);
-            LOG.info("emoji.csv written to: " + csvPath);
-        } else {
-            LOG.fine("emoji.csv already cached");
         }
     }
 
@@ -226,7 +262,7 @@ public class EmojiInitializer {
      * Parses {@code emoji.json} using Gluon Connect and returns a list of {@link EmojiCsv} objects.
      *
      * @param jsonPath path to the emoji.json file
-     * @return parsed list of emoji data
+     * @return parsed list of emoji entries
      */
     private static List<EmojiCsv> parseEmojiJson(Path jsonPath) throws Exception {
         List<EmojiCsv> emojiList = new ArrayList<>();
@@ -244,9 +280,9 @@ public class EmojiInitializer {
     }
 
     /**
-     * Writes the given emoji list to a CSV file using {@link EmojiCsv#toString()}.
+     * Serializes the given emoji list to a CSV file.
      *
-     * @param emojiList the list to serialize
+     * @param emojiList the list to write
      * @param csvPath   destination file path
      */
     private static void writeCsv(List<EmojiCsv> emojiList, Path csvPath)
@@ -259,8 +295,8 @@ public class EmojiInitializer {
     }
 
     /**
-     * Ensures all sprite sheets for the given vendor and sizes exist in the cache,
-     * downloading any that are missing.
+     * Ensures all sprite sheets for the given vendor and sizes exist in the commit cache
+     * directory, downloading any that are missing.
      */
     private static void ensureSprites(EmojiVendor vendor, String commit, Path commitDir)
             throws Exception {
@@ -268,21 +304,19 @@ public class EmojiInitializer {
             Path spritePath = spritePath(vendor, size, commitDir);
             if (!Files.exists(spritePath)) {
                 String url = String.format(SPRITE_URL, commit, vendor.getId(), size);
-                LOG.fine("Downloading sprite: " + url);
                 downloadWithLock(URI.create(url).toURL(), spritePath,
                         commitDir.resolve(vendor.getId() + "_" + size + ".lck"));
-            } else {
-                LOG.fine("Sprite already cached: " + spritePath);
             }
         }
     }
 
     // -------------------------------------------------------------------------
-    // Path helpers — all overloaded to accept an explicit baseDir
+    // Path helpers
     // -------------------------------------------------------------------------
 
     /**
      * Returns the commit-level cache directory using the default base directory.
+     * Layout: {@code ~/.emoji-fx/<vendorId>/<commit>/}
      */
     public static Path baseDir(EmojiVendor vendor, String commit) {
         return baseDir(vendor, commit, Paths.get(DEFAULT_BASE_DIR));
@@ -297,7 +331,7 @@ public class EmojiInitializer {
     }
 
     /**
-     * Returns the expected local path for a sprite sheet of the given vendor and size,
+     * Returns the local path for a sprite sheet of the given vendor and size,
      * relative to the provided commit directory.
      */
     public static Path spritePath(EmojiVendor vendor, int size, Path commitDir) {
@@ -306,14 +340,14 @@ public class EmojiInitializer {
     }
 
     /**
-     * Returns the expected local path for the emoji CSV using the default base directory.
+     * Returns the local path for the emoji CSV using the default base directory.
      */
     public static Path csvPath(EmojiVendor vendor, String commit) {
         return csvPath(vendor, commit, Paths.get(DEFAULT_BASE_DIR));
     }
 
     /**
-     * Returns the expected local path for the emoji CSV under the given {@code baseDir}.
+     * Returns the local path for the emoji CSV under the given {@code baseDir}.
      */
     public static Path csvPath(EmojiVendor vendor, String commit, Path baseDir) {
         return baseDir(vendor, commit, baseDir).resolve("emoji.csv");
@@ -324,8 +358,9 @@ public class EmojiInitializer {
     // -------------------------------------------------------------------------
 
     /**
-     * Downloads a file to {@code dest}, guarded by a lock file to detect interrupted downloads.
-     * A stale lock causes the partial file to be cleaned up before retrying.
+     * Downloads a file to {@code dest}, guarded by a lock file to detect and recover from
+     * partial downloads left behind by a previous crash. If a stale lock is found,
+     * any partial file is cleaned up before retrying.
      */
     private static void downloadWithLock(java.net.URL url, Path dest, Path lock)
             throws IOException {
@@ -337,14 +372,13 @@ public class EmojiInitializer {
         Files.createFile(lock);
         try (InputStream in = url.openStream()) {
             Files.copy(in, dest, StandardCopyOption.REPLACE_EXISTING);
-            LOG.fine("Downloaded: " + dest);
         } finally {
             Files.deleteIfExists(lock);
         }
     }
 
     /**
-     * Creates a single-thread daemon executor for background initialization work.
+     * Creates a single-thread daemon executor for background initialization.
      */
     private static java.util.concurrent.Executor daemonExecutor() {
         return Executors.newSingleThreadExecutor(r -> {

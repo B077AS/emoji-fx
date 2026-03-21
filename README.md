@@ -76,9 +76,9 @@ List<Object> nodes = TextUtil.convertToStringAndEmojiObjects("hello \uD83D\uDC4B
 ## Dependency
 ```xml
 <dependency>
-    <groupId>io.github.b077as</groupId>
-    <artifactId>emoji-fx</artifactId>
-    <version>1.0.0</version>
+    <groupId>io.github.b077as.emojifx</groupId>
+    <artifactId>emoji</artifactId>
+    <version>1.0.1</version>
 </dependency>
 ```
 
