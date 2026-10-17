@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>io.github.b077as.emojifx</groupId>
     <artifactId>emoji</artifactId>
-    <version>1.0.2-SNAPSHOT</version>
+    <version>1.0.2</version>
     <name>Emoji</name>
     <description>Emoji support for JavaFX</description>
     <url>https://github.com/B077AS/emoji-fx</url>
