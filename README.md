@@ -25,7 +25,7 @@ emoji-fx started as a fork of [Gluon's emoji library](https://github.com/gluonhq
 <dependency>
     <groupId>io.github.b077as.emojifx</groupId>
     <artifactId>emoji</artifactId>
-    <version>1.0.2</version>
+    <version>1.0.3</version>
 </dependency>
 ```
 
@@ -58,6 +58,10 @@ EmojiInitializer.initialize(EmojiVendor.FACEBOOK, Path.of("/your/custom/director
 2. `emoji.json` for that commit is downloaded and converted into a local `emoji.csv`.
 3. The sprite sheets (20, 32 and 64 px) for your vendor are downloaded.
 4. Everything is cached in `~/.emoji-fx/{vendor}/{commit}/`, so later launches start without downloading anything.
+
+### Memory: emojis are loaded as tiles
+
+A decoded sprite sheet is large (20 px ≈ 7 MB, 32 px ≈ 18 MB, 64 px ≈ 75 MB of heap, plus a GPU texture of the same size), while a UI only shows a few dozen emojis at a time. So the first time a size is needed, its sheet is decoded once and split into a compressed tile file next to the sprites (`tiles_20.bin`, `tiles_32.bin`, `tiles_64.bin`, a few MB each), and the sheet is released. `EmojiImageUtils.emojiView(...)` then loads just the emojis it shows; each tile is shared by every view of that emoji and only weakly cached. Memory therefore follows what is on screen instead of holding whole sheets. If a tile file can't be read or written, `emojiView` falls back to the sheet and viewport path automatically.
 
 ### Vendors
 

@@ -138,6 +138,17 @@ public class EmojiImageUtils {
         emojiView.setSmooth(true);
         emojiView.setPreserveRatio(true);
         emojiView.getProperties().put(IMAGE_VIEW_EMOJI_PROPERTY, emoji.getUnified());
+
+        // Preferred: a per-emoji tile (see EmojiTileCache) — no full sprite sheet stays in memory.
+        int spriteSize = (isRetina() || size > 32) ? 64 : (size <= 20 ? 20 : 32);
+        Image tile = EmojiTileCache.tile(emoji, spriteSize);
+        if (tile != null) {
+            emojiView.setImage(tile);
+            emojiView.setFitHeight(size);
+            return emojiView;
+        }
+
+        // Fallback: the whole sheet + a viewport (also what the tile path gives up to on any error).
         boolean gotImage = false;
         if (isRetina() || size > 32) {
             try {
